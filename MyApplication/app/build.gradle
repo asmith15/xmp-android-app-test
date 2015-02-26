@@ -1,0 +1,59 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 21
+    buildToolsVersion "21.1.2"
+
+    defaultConfig {
+        applicationId "com.example.andrew.myapplication"
+        minSdkVersion 15
+        targetSdkVersion 21
+        versionCode 1
+        versionName "1.0"
+
+        ndk {
+            moduleName "xmp-jni"
+            /**
+             *  Need this so that I get STL support, needed by XMP.incl_cpp
+             * Sadly I think this makes the apk much bigger because
+             * of the included libgnustl_shared.so.
+            */
+            stl "gnustl_shared"
+            /**
+             * gnustl_shared has exceptions turned off by default, but I need for XMP.
+            */
+            cFlags "-fexceptions"
+
+        }
+    }
+
+    sourceSets.main {
+        // Uncomment this line to use Android.mk instead
+        //jni.srcDirs = ["src/main/jni"]
+        jni.srcDirs = []
+        jniLibs.srcDir "src/main/jniLibs"
+    }
+
+    // call regular ndk-build(.cmd) script from app directory
+    task ndkBuild(type: Exec, description: 'Build XMP JNI object files') {
+        commandLine '/home/andrew/programs/android-ndk-r10d/ndk-build',
+                '-C', file('src/main/jni').absolutePath,
+                'NDK_OUT=../../../build/intermediates/ndk/debug/obj',
+                'NDK_LIBS_OUT=../../../build/intermediates/ndk/debug/lib'
+    }
+    tasks.withType(JavaCompile) {
+        compileTask -> compileTask.dependsOn ndkBuild
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'com.android.support:appcompat-v7:21.0.3'
+}
